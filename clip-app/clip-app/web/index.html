@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clip</title>
+<style>
+:root{--bg:#1d2027;--panel:#272b34;--line:#3a404c;--text:#e9ecf1;--mute:#9aa3b2;--cam:#ff4f8b;--game:#3dd6c6;--hot:#ffd23f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 "Segoe UI Variable","Segoe UI",system-ui,sans-serif}
+header{display:flex;align-items:baseline;gap:14px;padding:14px 22px;border-bottom:1px solid var(--line)}
+header h1{margin:0;font:800 24px Impact,"Arial Black",sans-serif;letter-spacing:.02em}
+header span{color:var(--mute);font-size:13px}
+main{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(320px,1fr);gap:18px;padding:18px 22px;max-width:1500px;margin:auto}
+@media(max-width:980px){main{grid-template-columns:1fr}}
+section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+h2{font-size:15px;margin:0 0 10px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+input,select,button{font:inherit;color:var(--text);background:#1a1d23;border:1px solid var(--line);border-radius:6px;padding:7px 10px}
+input[type=color]{padding:2px;width:38px;height:32px}
+input[type=number]{width:84px}
+input[type=text]{flex:1;min-width:160px}
+button{cursor:pointer}button:hover{border-color:var(--mute)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--hot);outline-offset:1px}
+button.on{background:var(--text);color:#111;border-color:var(--text)}
+button.cam.on{background:var(--cam);border-color:var(--cam);color:#111}
+button.game.on{background:var(--game);border-color:var(--game);color:#111}
+button.go{background:var(--hot);color:#1b1500;border-color:var(--hot);font-weight:700;padding:10px 16px}
+button:disabled{opacity:.5;cursor:wait}
+label{color:var(--mute);font-size:13px;display:flex;align-items:center;gap:6px}
+#stage{position:relative;background:#000;border-radius:6px;overflow:hidden}
+#stage video{display:block;width:100%}
+#over{position:absolute;inset:0;width:100%;height:100%;cursor:crosshair}
+#bar{display:flex;gap:10px;align-items:center;margin-top:8px}
+#seek{flex:1;padding:0}
+#time{color:var(--mute);font-variant-numeric:tabular-nums;min-width:120px;text-align:right}
+#preview{width:270px;height:480px;border-radius:8px;background:#000;display:block;margin:0 auto 10px}
+#words{display:flex;flex-wrap:wrap;gap:4px;max-height:170px;overflow:auto}
+#words input{width:auto;padding:3px 6px;font-size:13px}
+#status{min-height:22px;color:var(--mute);font-size:13px}
+#status.err{color:#ff7b7b;white-space:pre-wrap}
+#result video{width:240px;border-radius:8px;display:block;margin-top:8px}
+.hint{color:var(--mute);font-size:13px;margin:0 0 8px}
+</style>
+</head>
+<body>
+<header><h1>CLIP</h1><span>Pick a video, draw the cam and gameplay boxes, render a 9:16 short.</span></header>
+<main>
+<div>
+  <section>
+    <h2>Video</h2>
+    <div class="row">
+      <input type="text" id="url" placeholder="YouTube or Twitch VOD link">
+      <button id="loadUrl">Load link</button>
+      <input type="file" id="file" accept="video/*">
+    </div>
+    <div id="stage">
+      <video id="vid" playsinline></video>
+      <canvas id="over"></canvas>
+    </div>
+    <div id="bar">
+      <button id="play">Play</button>
+      <input type="range" id="seek" min="0" max="1000" value="0">
+      <span id="time">0:00 / 0:00</span>
+    </div>
+  </section>
+  <section>
+    <h2>Boxes</h2>
+    <p class="hint">Choose a box, then drag on the video. Your boxes are remembered.</p>
+    <div class="row">
+      <button class="cam" id="drawCam">Draw face cam box</button>
+      <button class="game" id="drawGame">Draw gameplay box</button>
+    </div>
+  </section>
+  <section>
+    <h2>Captions</h2>
+    <p class="hint">Set the start and end of your clip first, then transcribe. Fix any word below.</p>
+    <div class="row">
+      <button id="transcribe">Transcribe clip</button>
+      <select id="lang"><option value="">Auto language</option><option value="en">English</option><option value="ar">Arabic</option><option value="fr">French</option><option value="es">Spanish</option></select>
+    </div>
+    <div id="words"></div>
+  </section>
+</div>
+<div>
+  <section>
+    <h2>Preview</h2>
+    <canvas id="preview" width="270" height="480"></canvas>
+    <div class="row" style="justify-content:center"><button id="playClip">Play clip</button></div>
+  </section>
+  <section>
+    <h2>Clip</h2>
+    <div class="row">
+      <label>Start <input type="number" id="start" step="0.1" min="0" value="0"></label>
+      <button id="setStart">Use current time</button>
+    </div>
+    <div class="row">
+      <label>End <input type="number" id="end" step="0.1" min="0" value="30"></label>
+      <button id="setEnd">Use current time</button>
+    </div>
+    <div class="row">
+      <input type="text" id="hook" placeholder="Hook on top, e.g. Wait until he sees the clock">
+      <label>Show for <input type="number" id="hookSecs" min="0" step="0.5" value="4"> s</label>
+    </div>
+  </section>
+  <section>
+    <h2>Caption style</h2>
+    <div class="row">
+      <select id="preset"></select>
+      <select id="font"><option>Impact</option><option>Arial Black</option><option>Segoe UI Black</option><option>Verdana</option><option>Arial</option></select>
+    </div>
+    <div class="row">
+      <label>Text <input type="color" id="color" value="#ffffff"></label>
+      <label>Active word <input type="color" id="hl" value="#ffe600"></label>
+      <label>Size <input type="number" id="size" min="40" max="160" value="96"></label>
+    </div>
+    <div class="row">
+      <label>Words at a time <select id="chunk"><option>1</option><option>2</option><option selected>3</option></select></label>
+      <label><input type="checkbox" id="upper" checked> Capitals</label>
+    </div>
+  </section>
+  <section>
+    <button class="go" id="render">Gameplay + cam</button>
+    <div id="status"></div>
+    <div id="result"></div>
+  </section>
+</div>
+</main>
+<script>
+const $=id=>document.getElementById(id), vid=$('vid'), over=$('over'), pv=$('preview'), pctx=pv.getContext('2d');
+const K=270/1080, CAM_H=720, GAME_Y=1100, GAME_H=1920-GAME_Y, CAP_Y=(CAM_H+GAME_Y)/2;
+const PRESETS={Classic:['#ffffff','#ffe600'],Neon:['#ffffff','#00ff88'],Fire:['#ffffff','#ff6a00'],Pop:['#ffe600','#ffffff'],Ice:['#ffffff','#33c6ff']};
+let boxes=JSON.parse(localStorage.getItem('boxes')||'{"cam":null,"game":null}'), mode=null, drag=null, words=[], clipPlaying=false;
+const save=()=>localStorage.setItem('boxes',JSON.stringify(boxes));
+const status=(m,err)=>{$('status').textContent=m;$('status').className=err?'err':''};
+const fmt=t=>`${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}`;
+async function api(path,body,isForm){
+  const r=await fetch(path,body?{method:'POST',headers:isForm?{}:{'Content-Type':'application/json'},body:isForm?body:JSON.stringify(body)}:{});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(j.detail||'Something went wrong');
+  return j;
+}
+function setSource(s){
+  if(!s.exists) return;
+  vid.src=s.url; vid.onloadedmetadata=()=>{$('end').value=Math.min(30,s.duration).toFixed(1);sizeOver();};
+  status('Video ready. Draw the two boxes.');
+}
+async function wrap(label,fn){
+  const btns=[...document.querySelectorAll('button')];btns.forEach(b=>b.disabled=true);status(label);
+  try{await fn()}catch(e){status(e.message,true)}finally{btns.forEach(b=>b.disabled=false)}
+}
+$('loadUrl').onclick=()=>wrap('Downloading video...',async()=>setSource(await api('/api/url',{url:$('url').value.trim()})));
+$('file').onchange=e=>{const f=e.target.files[0];if(!f)return;const fd=new FormData();fd.append('file',f);
+  wrap('Importing video...',async()=>setSource(await api('/api/upload',fd,true)));};
+api('/api/source').then(setSource).catch(()=>{});
+api('/api/health').then(h=>{if(!h.ffmpeg)status('FFmpeg not found. Run install_tools.bat and reopen the terminal.',true)}).catch(()=>{});
+
+/* player */
+$('play').onclick=()=>vid.paused?vid.play():vid.pause();
+vid.onplay=()=>$('play').textContent='Pause'; vid.onpause=()=>$('play').textContent='Play';
+$('seek').oninput=()=>{vid.currentTime=vid.duration*$('seek').value/1000};
+$('setStart').onclick=()=>$('start').value=vid.currentTime.toFixed(1);
+$('setEnd').onclick=()=>$('end').value=vid.currentTime.toFixed(1);
+$('playClip').onclick=()=>{vid.currentTime=+$('start').value;clipPlaying=true;vid.play()};
+
+/* boxes */
+function sizeOver(){over.width=over.clientWidth;over.height=over.clientHeight}
+addEventListener('resize',sizeOver);
+$('drawCam').onclick=()=>setMode('cam'); $('drawGame').onclick=()=>setMode('game');
+function setMode(m){mode=mode===m?null:m;$('drawCam').classList.toggle('on',mode==='cam');$('drawGame').classList.toggle('on',mode==='game')}
+const pt=e=>{const r=over.getBoundingClientRect();return[Math.min(1,Math.max(0,(e.clientX-r.left)/r.width)),Math.min(1,Math.max(0,(e.clientY-r.top)/r.height))]};
+over.onmousedown=e=>{if(!mode){vid.paused?vid.play():vid.pause();return}drag=pt(e)};
+over.onmousemove=e=>{if(!drag)return;const[x,y]=pt(e);boxes[mode]=[Math.min(drag[0],x),Math.min(drag[1],y),Math.abs(x-drag[0]),Math.abs(y-drag[1])]};
+addEventListener('mouseup',()=>{if(!drag)return;drag=null;if(boxes[mode]&&(boxes[mode][2]<.02||boxes[mode][3]<.02))boxes[mode]=null;save();setMode(mode)});
+
+/* caption style */
+Object.keys(PRESETS).forEach(n=>$('preset').add(new Option(n,n)));
+$('preset').onchange=()=>{const[c,h]=PRESETS[$('preset').value];$('color').value=c;$('hl').value=h};
+const style=()=>({font:$('font').value,size:+$('size').value,color:$('color').value,hl:$('hl').value,chunk:+$('chunk').value,upper:$('upper').checked});
+
+/* words */
+function showWords(){
+  $('words').innerHTML='';
+  words.forEach((w,i)=>{const inp=document.createElement('input');inp.value=w.w;inp.title=`${w.s}s`;
+    inp.size=Math.max(2,w.w.length);inp.oninput=()=>{w.w=inp.value;inp.size=Math.max(2,inp.value.length)};$('words').append(inp)});
+}
+$('transcribe').onclick=()=>wrap('Transcribing (first run downloads the model)...',async()=>{
+  const r=await api('/api/transcribe',{start:+$('start').value,end:+$('end').value,language:$('lang').value});
+  words=r.words;showWords();status(`Found ${words.length} words (${r.device.toUpperCase()}). Edit any word, then render.`)});
+
+/* render */
+$('render').onclick=()=>wrap('Rendering... this can take a minute.',async()=>{
+  if(!boxes.cam||!boxes.game) throw new Error('Draw both boxes first: the face cam and the gameplay.');
+  const r=await api('/api/render',{start:+$('start').value,end:+$('end').value,cam:boxes.cam,game:boxes.game,
+    words:words.filter(w=>w.w.trim()),style:style(),hook:$('hook').value,hook_secs:+$('hookSecs').value});
+  $('result').innerHTML=`<video src="${r.file}" controls></video><p class="hint">Saved in the outputs folder. <a style="color:var(--hot)" href="${r.file}" download>Download</a></p>`;
+  status('Done.')});
+
+/* drawing loop: box overlay + live 9:16 preview */
+function cover(b,dx,dy,dw,dh){
+  let sx=b[0]*vid.videoWidth,sy=b[1]*vid.videoHeight,sw=b[2]*vid.videoWidth,sh=b[3]*vid.videoHeight,r=dw/dh;
+  if(sw/sh>r){const n=sh*r;sx+=(sw-n)/2;sw=n}else{const n=sw/r;sy+=(sh-n)/2;sh=n}
+  pctx.drawImage(vid,sx,sy,sw,sh,dx,dy,dw,dh);
+}
+function loop(){
+  const c=over.getContext('2d');c.clearRect(0,0,over.width,over.height);c.lineWidth=3;c.font='bold 14px sans-serif';
+  [['cam','#ff4f8b','Face cam'],['game','#3dd6c6','Gameplay']].forEach(([k,col,lab])=>{const b=boxes[k];if(!b)return;
+    c.strokeStyle=col;c.fillStyle=col;c.strokeRect(b[0]*over.width,b[1]*over.height,b[2]*over.width,b[3]*over.height);c.fillText(lab,b[0]*over.width+6,b[1]*over.height+18)});
+  if(vid.duration){$('seek').value=vid.currentTime/vid.duration*1000;$('time').textContent=`${fmt(vid.currentTime)} / ${fmt(vid.duration)}`}
+  if(clipPlaying&&vid.currentTime>=+$('end').value){vid.pause();clipPlaying=false}
+  pctx.fillStyle='#000';pctx.fillRect(0,0,270,480);
+  if(vid.videoWidth){
+    if(boxes.cam)cover(boxes.cam,0,0,270,CAM_H*K);
+    if(boxes.game)cover(boxes.game,0,GAME_Y*K,270,GAME_H*K);
+    const t=vid.currentTime-(+$('start').value),st=style(),hk=$('hook').value.trim(),hs=+$('hookSecs').value;
+    if(hk&&t>=0&&(hs<=0||t<hs)){pctx.font=`bold ${64*K}px ${st.font}`;const w=Math.min(250,pctx.measureText(hk).width+12);
+      pctx.fillStyle='#fff';pctx.fillRect(135-w/2,10,w,22);pctx.fillStyle='#000';pctx.textAlign='center';pctx.fillText(hk,135,26,w-8)}
+    const i=words.findIndex(w=>t>=w.s&&t<w.e+.2);
+    if(i>=0){const g=Math.floor(i/st.chunk)*st.chunk,grp=words.slice(g,g+st.chunk).map(w=>st.upper?w.w.toUpperCase():w.w);
+      pctx.font=`${st.size*K}px ${st.font}`;pctx.textAlign='left';pctx.lineWidth=3;pctx.strokeStyle='#000';
+      const sp=pctx.measureText(' ').width,tot=grp.reduce((a,x)=>a+pctx.measureText(x).width,0)+sp*(grp.length-1);let x=135-tot/2;
+      grp.forEach((wd,k)=>{pctx.fillStyle=g+k===i?st.hl:st.color;pctx.strokeText(wd,x,CAP_Y*K+8);pctx.fillText(wd,x,CAP_Y*K+8);x+=pctx.measureText(wd).width+sp})}
+  }
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
