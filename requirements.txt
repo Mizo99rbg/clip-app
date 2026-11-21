@@ -3,3 +3,5 @@ uvicorn
 python-multipart
 yt-dlp
 faster-whisper
+pillow
+chat-downloader

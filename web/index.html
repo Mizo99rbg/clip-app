@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clip</title>
+<style>
+:root{--bg:#1d2027;--panel:#272b34;--line:#3a404c;--text:#e9ecf1;--mute:#9aa3b2;--cam:#ff4f8b;--game:#3dd6c6;--hot:#ffd23f}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 "Segoe UI Variable","Segoe UI",system-ui,sans-serif}
+header{display:flex;align-items:center;gap:14px;padding:12px 22px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+header h1{margin:0;font:800 24px Impact,"Arial Black",sans-serif;letter-spacing:.02em}
+nav{display:flex;gap:6px;margin-left:auto}
+nav button{border-radius:20px;padding:6px 16px}
+nav button.on{background:var(--hot);color:#1b1500;border-color:var(--hot);font-weight:700}
+.badge{background:var(--cam);color:#111;border-radius:10px;padding:0 7px;font-size:12px;font-weight:700;margin-left:4px}
+.badge:empty{display:none}
+main{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(330px,1fr);gap:18px;padding:18px 22px;max-width:1500px;margin:auto}
+@media(max-width:980px){main{grid-template-columns:1fr}}
+.page{max-width:1100px;margin:auto;padding:18px 22px}
+section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+h2{font-size:15px;margin:0 0 10px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+input,select,button{font:inherit;color:var(--text);background:#1a1d23;border:1px solid var(--line);border-radius:6px;padding:7px 10px}
+input[type=color]{padding:2px;width:38px;height:32px}
+input[type=number]{width:84px}
+input[type=range]{padding:0;accent-color:var(--hot);flex:1;min-width:120px}
+input[type=text],input[type=url]{flex:1;min-width:170px}
+button{cursor:pointer}button:hover{border-color:var(--mute)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--hot);outline-offset:1px}
+button.on{background:var(--text);color:#111;border-color:var(--text)}
+button.cam.on{background:var(--cam);border-color:var(--cam);color:#111}
+button.game.on{background:var(--game);border-color:var(--game);color:#111}
+button.go{background:var(--hot);color:#1b1500;border-color:var(--hot);font-weight:700;padding:10px 16px}
+button.keep{background:var(--game);border-color:var(--game);color:#06201d;font-weight:700;padding:11px 26px}
+button.del{background:#ff6b6b;border-color:#ff6b6b;color:#2a0707;font-weight:700;padding:11px 26px}
+button:disabled{opacity:.5;cursor:wait}
+label{color:var(--mute);font-size:13px;display:flex;align-items:center;gap:6px}
+.hint{color:var(--mute);font-size:13px;margin:0 0 8px}
+#stage{position:relative;background:#000;border-radius:6px;overflow:hidden}
+#stage video{display:block;width:100%}
+#over{position:absolute;inset:0;width:100%;height:100%;cursor:crosshair}
+#bar{display:flex;gap:10px;align-items:center;margin-top:8px}
+#seek{flex:1}
+#time{color:var(--mute);font-variant-numeric:tabular-nums;min-width:130px;text-align:right}
+progress{width:100%;height:14px;accent-color:var(--hot)}
+#dlText{font-variant-numeric:tabular-nums}
+#preview{width:270px;height:480px;border-radius:8px;background:#000;display:block;margin:0 auto 10px}
+#words,#chips{display:flex;flex-wrap:wrap;gap:4px;max-height:170px;overflow:auto;margin-bottom:8px}
+#words input{width:auto;padding:3px 6px;font-size:13px}
+.chip{padding:3px 9px;border-radius:14px;border:2px solid var(--line);cursor:pointer;background:#fff;font-weight:700;user-select:none}
+.chip.sel{border-color:var(--hot);box-shadow:0 0 0 2px var(--hot)}
+#status{min-height:22px;color:var(--mute);font-size:13px}
+#status.err,.err{color:#ff7b7b;white-space:pre-wrap}
+.warn{color:var(--hot);font-size:13px}
+#result video{width:240px;border-radius:8px;display:block;margin-top:8px}
+#revBody{text-align:center}
+#revBody video{max-height:68vh;max-width:100%;border-radius:10px;background:#000}
+#revBody .row{justify-content:center;margin-top:12px}
+.day{border-left:4px solid var(--line);padding-left:12px;margin:14px 0}
+.day.full{border-color:var(--game)}
+.day h3{margin:0 0 6px;font-size:15px}
+.qrow{display:flex;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line);flex-wrap:wrap}
+.qrow .t{width:52px;font-variant-numeric:tabular-nums;color:var(--hot)}
+.qrow .n{flex:1;min-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qrow video{width:54px;height:96px;object-fit:cover;border-radius:4px;background:#000}
+.sess{border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:10px}
+.sess h3{margin:0 0 4px;font-size:15px}
+.sess .log{font:12px/1.5 Consolas,monospace;color:var(--mute);margin:8px 0 0;white-space:pre-wrap}
+.pill{display:inline-block;border-radius:10px;padding:1px 9px;font-size:12px;font-weight:700;background:var(--line)}
+.pill.watching{background:var(--game);color:#06201d}.pill.error{background:#ff6b6b;color:#2a0707}
+</style>
+</head>
+<body>
+<header><h1>CLIP</h1>
+<nav>
+  <button class="tab on" data-tab="editor">Editor</button>
+  <button class="tab" data-tab="review">Review<span class="badge" id="badge"></span></button>
+  <button class="tab" data-tab="queue">Queue</button>
+  <button class="tab" data-tab="live">Live<span class="badge" id="liveBadge"></span></button>
+</nav></header>
+
+<main id="tab-editor">
+<div>
+  <section>
+    <h2>Video</h2>
+    <div class="row">
+      <input type="url" id="url" placeholder="YouTube or Twitch recording link (any length)">
+      <select id="quality"><option value="1080">1080p (best)</option><option value="720">720p</option><option value="480">480p (smallest)</option></select>
+      <button id="loadUrl" class="go">Load video</button>
+    </div>
+    <div class="row"><label>or a file on your PC <input type="file" id="file" accept="video/*"></label></div>
+    <div id="dlBox" hidden>
+      <p class="hint" id="dlInfo"></p>
+      <progress id="dlBar" max="100" value="0"></progress>
+      <div id="dlText" class="hint"></div>
+    </div>
+    <p class="warn" id="audioWarn" hidden>This video has no sound track, so clips from it will be silent.</p>
+    <div id="stage"><video id="vid" playsinline></video><canvas id="over"></canvas></div>
+    <div id="bar"><button id="play">Play</button><input type="range" id="seek" min="0" max="1000" value="0"><span id="time">0:00 / 0:00</span></div>
+  </section>
+  <section>
+    <h2>Boxes</h2>
+    <p class="hint">Choose a box, then drag on the video. Click the video to play or pause when no box is chosen.</p>
+    <div class="row"><button class="cam" id="drawCam">Draw face cam box</button><button class="game" id="drawGame">Draw gameplay box</button></div>
+  </section>
+  <section>
+    <h2>Captions</h2>
+    <p class="hint">Captions are written automatically when you render. To read or fix them first, set the clip start and end, then transcribe.</p>
+    <div class="row"><button id="transcribe">Transcribe clip</button>
+      <select id="lang"><option value="">Auto language</option><option value="en">English</option><option value="ar">Arabic</option><option value="fr">French</option><option value="es">Spanish</option></select></div>
+    <div id="words"></div>
+  </section>
+</div>
+<div>
+  <section>
+    <h2>Preview</h2>
+    <canvas id="preview" width="270" height="480"></canvas>
+    <div class="row" style="justify-content:center"><button id="playClip">Play clip</button></div>
+  </section>
+  <section>
+    <h2>Clip and layout</h2>
+    <div class="row"><label>Start <input type="number" id="start" step="0.1" min="0" value="0"></label><button id="setStart">Use current time</button></div>
+    <div class="row"><label>End <input type="number" id="end" step="0.1" min="0" value="30"></label><button id="setEnd">Use current time</button></div>
+    <div class="row"><label style="flex:1">Cam height <input type="range" id="camPct" min="25" max="55" value="36"></label></div>
+    <div class="row"><label style="flex:1">Caption position <input type="range" id="capY" min="15" max="75" value="36"></label></div>
+  </section>
+  <section>
+    <h2>Hook (first seconds)</h2>
+    <div class="row"><input type="text" id="hookText" placeholder="e.g. Speed starts STEALING the second he plays GTA 6"></div>
+    <p class="hint">Click words to select them, then pick a color.</p>
+    <div id="chips"></div>
+    <div class="row"><input type="color" id="hkPick" value="#d4002a"><button id="hkSel">Color selected</button><button id="hkAll">Color all</button><button id="hkReset">Reset colors</button></div>
+    <div class="row">
+      <label>Box <input type="color" id="hkBg" value="#ffffff"></label>
+      <label>Text <input type="color" id="hkColor" value="#111111"></label>
+      <select id="hkFont"><option>Arial</option><option>Impact</option><option>Arial Black</option><option>Segoe UI Black</option><option>Verdana</option></select>
+    </div>
+    <div class="row"><label>Size <input type="number" id="hkSize" min="30" max="110" value="62"></label><label>Show for <input type="number" id="hkSecs" min="0" step="0.5" value="3"> s</label></div>
+    <div class="row"><label style="flex:1">Position <input type="range" id="hkY" min="8" max="60" value="24"></label></div>
+  </section>
+  <section>
+    <h2>Caption style</h2>
+    <div class="row"><select id="preset"></select><select id="mode"><option value="color">Active word in color</option><option value="box">Active word in a box</option></select><select id="font"><option>Impact</option><option>Arial Black</option><option>Segoe UI Black</option><option>Verdana</option><option>Arial</option></select></div>
+    <div class="row"><label>Text <input type="color" id="color" value="#ffffff"></label><label>Active word <input type="color" id="hl" value="#ffe600"></label><label>Box <input type="color" id="boxc" value="#8a3cff"></label><label>Size <input type="number" id="size" min="40" max="160" value="84"></label></div>
+    <div class="row"><label>Words at a time <select id="chunk"><option>1</option><option>2</option><option selected>3</option></select></label><label><input type="checkbox" id="upper" checked> Capitals</label></div>
+    <div class="row"><button id="saveLive">Use this look for live clips</button></div>
+  </section>
+  <section>
+    <button class="go" id="render">Gameplay + cam</button>
+    <div id="status"></div><div id="result"></div>
+  </section>
+</div>
+</main>
+
+<div id="tab-review" class="page" hidden>
+  <section><h2>Review</h2><p class="hint">New clips land here first. Keep puts a clip in the queue, Delete removes the file. Keys: K keep, D delete, S skip.</p><div id="revBody"></div></section>
+</div>
+
+<div id="tab-queue" class="page" hidden>
+  <section><h2>Posting plan</h2>
+    <div class="row"><label>Clips per day <input type="number" id="perDay" min="1" max="30"></label><label>First post <input type="time" id="firstT"></label><label>Last post <input type="time" id="lastT"></label><button id="saveSet">Save</button><button id="repack">Refill days in order</button></div>
+    <p class="hint">When a day is full, the next kept clip goes to the next day. Change a clip's day with its date box.</p></section>
+  <section><h2>Queue</h2><div id="days"></div></section>
+</div>
+
+<div id="tab-live" class="page" hidden>
+  <section><h2>Watch a live stream</h2>
+    <p class="hint">The app records the stream, reads chat, and when chat spikes it cuts 30 seconds before and 5 after, adds your layout, captions and hook style, and puts the clip in Review.</p>
+    <div class="row"><input type="url" id="liveUrl" placeholder="YouTube live or Twitch channel link">
+      <select id="sens"><option value="2.0">Many clips (sensitive)</option><option value="3.0" selected>Normal</option><option value="4.5">Only big moments</option></select>
+      <button class="go" id="liveStart">Start watching</button></div>
+    <p class="hint" id="liveMsg"></p>
+  </section>
+  <section><h2>Watching now</h2><div id="sessions"><p class="hint">Nothing yet.</p></div></section>
+</div>
+
+<script>
+const $=id=>document.getElementById(id), vid=$('vid'), over=$('over'), pv=$('preview'), pctx=pv.getContext('2d');
+const K=270/1080, PRESETS={Classic:['#ffffff','#ffe600'],Neon:['#ffffff','#00ff88'],Fire:['#ffffff','#ff6a00'],Pop:['#ffe600','#ffffff'],Ice:['#ffffff','#33c6ff']};
+const S={boxes:JSON.parse(localStorage.getItem('boxes')||'{"cam":null,"game":null}'),words:[],hook:[],mode:null,drag:null,clipPlaying:false,capLinked:true};
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=t=>{t=Math.max(0,t|0);const h=t/3600|0,m=(t%3600)/60|0,s=t%60;return(h?h+':'+String(m).padStart(2,'0'):m)+':'+String(s).padStart(2,'0')};
+const gb=b=>b>=1e9?(b/1e9).toFixed(1)+' GB':Math.round(b/1e6)+' MB';
+const status=(m,err)=>{$('status').textContent=m;$('status').className=err?'err':''};
+async function api(path,body,isForm){
+  const r=await fetch(path,body!==undefined?{method:'POST',headers:isForm?{}:{'Content-Type':'application/json'},body:isForm?body:JSON.stringify(body)}:{});
+  const j=await r.json().catch(()=>({}));
+  if(r.status===404||r.status===405) throw new Error('The app server is old or was not restarted. Close ALL black windows, then double-click run.bat again.');
+  if(!r.ok) throw new Error(typeof j.detail==='string'?j.detail:'Something went wrong');
+  return j;
+}
+async function busy(label,fn){
+  const b=[...document.querySelectorAll('main#tab-editor button')];b.forEach(x=>x.disabled=true);status(label);
+  try{await fn()}catch(e){status(e.message,true)}finally{b.forEach(x=>x.disabled=false)}
+}
+
+/* ---------- tabs ---------- */
+let tab='editor',timer=null;
+function showTab(t){
+  tab=t;['editor','review','queue','live'].forEach(n=>$('tab-'+n).hidden=n!==t);
+  document.querySelectorAll('nav .tab').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
+  if(t!=='editor')vid.pause();
+  clearInterval(timer);
+  if(t==='review')loadReview();if(t==='queue')loadQueue();
+  if(t==='live'){loadLive();timer=setInterval(loadLive,2000)}
+}
+document.querySelectorAll('nav .tab').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+async function refreshBadge(){try{$('badge').textContent=(await api('/api/library?status=review')).clips.length||''}catch(e){}}
+refreshBadge();setInterval(refreshBadge,15000);
+
+/* ---------- loading a video ---------- */
+function setSource(s){
+  if(!s||!s.exists)return;
+  vid.src=s.url;vid.muted=false;vid.volume=1;
+  vid.onloadedmetadata=()=>{$('end').value=Math.min(30,s.duration).toFixed(1);sizeOver()};
+  $('audioWarn').hidden=s.has_audio!==false;
+  status('Video ready. Draw the two boxes.');
+}
+$('loadUrl').onclick=async()=>{
+  const url=$('url').value.trim();if(!url)return;
+  $('loadUrl').disabled=true;status('Checking the link...');
+  try{
+    const i=await api('/api/url/info',{url});
+    if(i.live)throw new Error('That stream is live right now. Use the Live tab to watch it, or paste a recording link here.');
+    const q=$('quality').value,sz=i.sizes[q];
+    $('dlInfo').innerHTML=`<b>${esc(i.title)}</b> · ${fmt(i.duration||0)} long · about ${sz?gb(sz):'an unknown size'} at ${q}p`;
+    $('dlBox').hidden=false;$('dlBar').value=0;$('dlText').textContent='Starting...';status('');
+    const {job}=await api('/api/url/download',{url,quality:+q});
+    for(;;){
+      const j=await api('/api/job/'+job);
+      if(j.state==='error')throw new Error(j.msg);
+      if(j.state==='done'){$('dlBar').value=100;$('dlText').textContent=`Done in ${fmt(j.elapsed)}.`;setSource(j.info);break}
+      const part=j.stage===1?'Video':j.stage===2?'Sound':'';
+      $('dlBar').value=j.pct||0;
+      $('dlText').textContent=j.eta||j.speed?`${part} ${Math.round(j.pct||0)}%  ·  ${j.speed||''}  ·  ${j.eta&&j.eta!=='Unknown'?j.eta+' left':'working out time left...'}`:j.msg;
+      await new Promise(r=>setTimeout(r,1200));
+    }
+  }catch(e){status(e.message,true)}finally{$('loadUrl').disabled=false}
+};
+$('file').onchange=e=>{const f=e.target.files[0];if(!f)return;const fd=new FormData();fd.append('file',f);
+  busy('Importing video...',async()=>setSource(await api('/api/upload',fd,true)))};
+api('/api/source').then(setSource).catch(()=>{});
+api('/api/health').then(h=>{
+  if(!h.version||h.version<3)status('An OLD copy of the app is still running. Close ALL black windows, then double-click run.bat again.',true);
+  else if(!h.ffmpeg)status('FFmpeg not found. Run install_tools.bat and reopen the terminal.',true)}).catch(()=>{});
+
+/* ---------- player ---------- */
+$('play').onclick=()=>vid.paused?vid.play():vid.pause();
+vid.onplay=()=>$('play').textContent='Pause';vid.onpause=()=>$('play').textContent='Play';
+$('seek').oninput=()=>{vid.currentTime=vid.duration*$('seek').value/1000};
+$('setStart').onclick=()=>$('start').value=vid.currentTime.toFixed(1);
+$('setEnd').onclick=()=>$('end').value=vid.currentTime.toFixed(1);
+$('playClip').onclick=()=>{vid.currentTime=+$('start').value;S.clipPlaying=true;vid.play()};
+
+/* ---------- boxes ---------- */
+function sizeOver(){over.width=over.clientWidth;over.height=over.clientHeight}
+addEventListener('resize',sizeOver);
+function setMode(m){S.mode=S.mode===m?null:m;$('drawCam').classList.toggle('on',S.mode==='cam');$('drawGame').classList.toggle('on',S.mode==='game')}
+$('drawCam').onclick=()=>setMode('cam');$('drawGame').onclick=()=>setMode('game');
+const pt=e=>{const r=over.getBoundingClientRect();return[Math.min(1,Math.max(0,(e.clientX-r.left)/r.width)),Math.min(1,Math.max(0,(e.clientY-r.top)/r.height))]};
+over.onmousedown=e=>{if(!S.mode){vid.paused?vid.play():vid.pause();return}S.drag=pt(e)};
+over.onmousemove=e=>{if(!S.drag)return;const[x,y]=pt(e);S.boxes[S.mode]=[Math.min(S.drag[0],x),Math.min(S.drag[1],y),Math.abs(x-S.drag[0]),Math.abs(y-S.drag[1])]};
+addEventListener('mouseup',()=>{if(!S.drag)return;S.drag=null;const b=S.boxes[S.mode];if(b&&(b[2]<.02||b[3]<.02))S.boxes[S.mode]=null;
+  localStorage.setItem('boxes',JSON.stringify(S.boxes));setMode(S.mode)});
+
+/* ---------- layout + styles ---------- */
+Object.keys(PRESETS).forEach(n=>$('preset').add(new Option(n,n)));
+$('preset').onchange=()=>{const[c,h]=PRESETS[$('preset').value];$('color').value=c;$('hl').value=h};
+$('camPct').oninput=()=>{if(S.capLinked)$('capY').value=$('camPct').value};
+$('capY').oninput=()=>S.capLinked=false;
+const style=()=>({font:$('font').value,size:+$('size').value,color:$('color').value,hl:$('hl').value,box:$('boxc').value,chunk:+$('chunk').value,upper:$('upper').checked,mode:$('mode').value});
+const layout=()=>({cam_h:Math.round($('camPct').value/100*1920/2)*2,cap_y:Math.round($('capY').value/100*1920)});
+const hook=(withWords=true)=>({words:withWords?S.hook.map(h=>({t:h.t,c:h.c||null})):[],size:+$('hkSize').value,font:$('hkFont').value,color:$('hkColor').value,box:$('hkBg').value,secs:+$('hkSecs').value,y:+$('hkY').value});
+function applyDefaults(d){
+  if(!d)return;
+  if(d.cam&&!S.boxes.cam)S.boxes={cam:d.cam,game:d.game};
+  const st=d.style||{};
+  [['font','font'],['size','size'],['color','color'],['hl','hl'],['boxc','box'],['chunk','chunk']].forEach(([id,k])=>{if(st[k]!==undefined)$(id).value=st[k]});
+  if(st.mode)$('mode').value=st.mode;if(st.upper!==undefined)$('upper').checked=st.upper;
+  const lo=d.layout||{};if(lo.cam_h){$('camPct').value=Math.round(lo.cam_h/19.2);$('capY').value=Math.round((lo.cap_y||lo.cam_h)/19.2)}
+  const hk=d.hook||{};
+  [['hkSize','size'],['hkFont','font'],['hkColor','color'],['hkBg','box'],['hkSecs','secs'],['hkY','y']].forEach(([id,k])=>{if(hk[k]!==undefined)$(id).value=hk[k]});
+}
+api('/api/defaults').then(applyDefaults).catch(()=>{});
+async function saveLook(){await api('/api/defaults',{cam:S.boxes.cam,game:S.boxes.game,style:style(),hook:hook(false),layout:layout()})}
+$('saveLive').onclick=async()=>{
+  if(!S.boxes.cam||!S.boxes.game)return status('Draw both boxes first.',true);
+  try{await saveLook();status('Saved. Live clips will use these boxes, layout, caption style and hook style.')}catch(e){status(e.message,true)}};
+
+/* ---------- hook editor ---------- */
+function drawChips(){
+  $('chips').innerHTML='';
+  S.hook.forEach((h,i)=>{const c=document.createElement('span');c.className='chip'+(h.sel?' sel':'');c.textContent=h.t;
+    c.style.color=h.c||$('hkColor').value;c.style.background=$('hkBg').value;c.onclick=()=>{h.sel=!h.sel;drawChips()};$('chips').append(c)});
+}
+$('hookText').oninput=()=>{
+  const ws=$('hookText').value.trim().split(/\s+/).filter(Boolean);
+  S.hook=ws.map((t,i)=>({t,c:S.hook[i]?S.hook[i].c:null,sel:false}));drawChips()};
+$('hkSel').onclick=()=>{S.hook.forEach(h=>{if(h.sel)h.c=$('hkPick').value;h.sel=false});drawChips()};
+$('hkAll').onclick=()=>{S.hook.forEach(h=>h.c=$('hkPick').value);drawChips()};
+$('hkReset').onclick=()=>{S.hook.forEach(h=>h.c=null);drawChips()};
+$('hkColor').oninput=$('hkBg').oninput=drawChips;
+
+/* ---------- captions text ---------- */
+function showWords(){
+  $('words').innerHTML='';
+  S.words.forEach(w=>{const i=document.createElement('input');i.value=w.w;i.title=w.s+'s';i.size=Math.max(2,w.w.length);
+    i.oninput=()=>{w.w=i.value;i.size=Math.max(2,i.value.length)};$('words').append(i)});
+}
+$('transcribe').onclick=()=>busy('Transcribing (the first run downloads the speech model)...',async()=>{
+  const r=await api('/api/transcribe',{start:+$('start').value,end:+$('end').value,language:$('lang').value});
+  S.words=r.words;showWords();status(`Found ${S.words.length} words. Fix any word, then render.`)});
+
+/* ---------- render ---------- */
+$('render').onclick=()=>busy('Rendering... this can take a minute.',async()=>{
+  if(!S.boxes.cam||!S.boxes.game)throw new Error('Draw both boxes first: the face cam and the gameplay.');
+  const r=await api('/api/render',{start:+$('start').value,end:+$('end').value,cam:S.boxes.cam,game:S.boxes.game,
+    words:S.words.filter(w=>w.w.trim()),style:style(),hook:hook(),layout:layout(),auto_captions:true,label:$('hookText').value});
+  $('result').innerHTML=`<video src="${r.file}" controls></video>
+    <p class="hint">Added to Review. ${r.words} caption words. <a style="color:var(--hot)" href="${r.file}" download>Download</a></p>
+    ${r.has_audio?'':'<p class="warn">This clip has no sound: the source video has no audio track.</p>'}`;
+  saveLook().catch(()=>{});refreshBadge();status('Done. The clip is waiting in Review.')});
+
+/* ---------- review ---------- */
+let rev=[],ri=0;
+const nice=s=>new Date(s.replace(' ','T')).toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'});
+async function loadReview(){rev=(await api('/api/library?status=review')).clips;ri=Math.min(ri,Math.max(0,rev.length-1));$('badge').textContent=rev.length||'';drawReview()}
+function drawReview(msg){
+  const c=rev[ri];
+  if(!c){$('revBody').innerHTML=`<p class="hint">${msg||'Nothing to review. New clips show up here.'}</p>`;return}
+  $('revBody').innerHTML=`<video src="${c.url}" controls autoplay loop></video>
+    <p>${esc(c.label||'Clip')} <span class="hint">(${ri+1} of ${rev.length})</span></p><p class="hint">${msg||''}</p>
+    <div class="row"><button class="keep" id="keepBtn">Keep (K)</button><button class="del" id="delBtn">Delete (D)</button><button id="skipBtn">Skip (S)</button></div>`;
+  $('keepBtn').onclick=keepClip;$('delBtn').onclick=delClip;$('skipBtn').onclick=skipClip;
+}
+async function keepClip(){const c=rev[ri];if(!c)return;try{const r=await api(`/api/library/${c.id}/keep`,{});await loadReview();drawReview(`Queued for ${nice(r.sched)} at ${r.sched.slice(11)}.`)}catch(e){drawReview(e.message)}}
+async function delClip(){const c=rev[ri];if(!c||!confirm('Delete this clip and its file? This cannot be undone.'))return;await api(`/api/library/${c.id}/delete`,{});await loadReview()}
+function skipClip(){if(rev.length>1){ri=(ri+1)%rev.length;drawReview()}}
+addEventListener('keydown',e=>{if(tab!=='review'||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;
+  const k=e.key.toLowerCase();if(k==='k')keepClip();else if(k==='d')delClip();else if(k==='s')skipClip()});
+
+/* ---------- queue ---------- */
+async function loadQueue(){
+  const q=await api('/api/queue');
+  $('perDay').value=q.settings.per_day;$('firstT').value=q.settings.first;$('lastT').value=q.settings.last;
+  $('days').innerHTML=q.days.length?'':'<p class="hint">No clips in the queue yet. Keep a clip in Review to add it.</p>';
+  const today=new Date().toISOString().slice(0,10);
+  q.days.forEach(d=>{
+    const el=document.createElement('div');el.className='day'+(d.clips.length>=d.cap?' full':'');
+    el.innerHTML=`<h3>${nice(d.date+' 00:00')} - ${d.clips.length} of ${d.cap}${d.clips.length>=d.cap?' (full)':''}</h3>`+d.clips.map(c=>`
+      <div class="qrow"><span class="t">${c.sched.slice(11)}</span><video src="${c.url}" muted preload="metadata"></video><span class="n">${esc(c.label||'Clip')}</span>
+      <input type="date" value="${d.date}" min="${today}" data-id="${c.id}"><button data-back="${c.id}">Back to review</button><button data-del="${c.id}">Delete</button></div>`).join('');
+    $('days').append(el)});
+  $('days').querySelectorAll('input[type=date]').forEach(i=>i.onchange=async()=>{try{await api(`/api/queue/${i.dataset.id}/move`,{date:i.value})}catch(e){alert(e.message)}loadQueue()});
+  $('days').querySelectorAll('[data-back]').forEach(b=>b.onclick=async()=>{await api(`/api/queue/${b.dataset.back}/unqueue`,{});loadQueue();refreshBadge()});
+  $('days').querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{if(confirm('Delete this clip and its file?')){await api(`/api/library/${b.dataset.del}/delete`,{});loadQueue()}});
+}
+$('saveSet').onclick=async()=>{try{await api('/api/settings',{per_day:+$('perDay').value,first:$('firstT').value,last:$('lastT').value});await api('/api/queue/repack',{});loadQueue()}catch(e){alert(e.message)}};
+$('repack').onclick=async()=>{await api('/api/queue/repack',{});loadQueue()};
+
+/* ---------- live ---------- */
+$('liveStart').onclick=async()=>{
+  const url=$('liveUrl').value.trim();if(!url)return;
+  try{await api('/api/watch/start',{url,sensitivity:+$('sens').value});$('liveUrl').value='';$('liveMsg').textContent='';loadLive()}
+  catch(e){$('liveMsg').textContent=e.message;$('liveMsg').className='hint err'}};
+async function loadLive(){
+  const {sessions}=await api('/api/watch');
+  $('liveBadge').textContent=sessions.filter(s=>s.state==='watching').length||'';
+  if(!sessions.length){$('sessions').innerHTML='<p class="hint">Nothing yet.</p>';return}
+  const open=new Set([...document.querySelectorAll('.sess[data-open]')].map(x=>x.dataset.id));
+  $('sessions').innerHTML=sessions.map(s=>`<div class="sess" data-id="${s.id}">
+    <h3>${esc(s.title)} <span class="pill ${s.state}">${s.state}</span></h3>
+    <div class="hint">${s.platform} · ${s.msgs} chat messages · ${s.rate} per second now · ${s.clips} clips made
+      ${s.ready?'':'<br><span class="warn">No saved look yet. Clips will be raw until you click "Use this look for live clips" in the Editor.</span>'}</div>
+    <div class="row"><button data-now="${s.id}">Clip now</button><button data-stop="${s.id}">Stop</button></div>
+    <div class="log">${esc(s.events.join('\n'))}</div></div>`).join('');
+  $('sessions').querySelectorAll('[data-now]').forEach(b=>b.onclick=()=>api(`/api/watch/${b.dataset.now}/clipnow`,{}).then(loadLive));
+  $('sessions').querySelectorAll('[data-stop]').forEach(b=>b.onclick=()=>api(`/api/watch/${b.dataset.stop}/stop`,{}).then(loadLive));
+}
+
+/* ---------- drawing loop: box overlay + live 9:16 preview ---------- */
+function rr(x,y,w,h,r){pctx.beginPath();pctx.moveTo(x+r,y);pctx.arcTo(x+w,y,x+w,y+h,r);pctx.arcTo(x+w,y+h,x,y+h,r);pctx.arcTo(x,y+h,x,y,r);pctx.arcTo(x,y,x+w,y,r);pctx.closePath()}
+function cover(b,dx,dy,dw,dh){
+  let sx=b[0]*vid.videoWidth,sy=b[1]*vid.videoHeight,sw=b[2]*vid.videoWidth,sh=b[3]*vid.videoHeight,r=dw/dh;
+  if(sw/sh>r){const n=sh*r;sx+=(sw-n)/2;sw=n}else{const n=sw/r;sy+=(sh-n)/2;sh=n}
+  pctx.drawImage(vid,sx,sy,sw,sh,dx,dy,dw,dh);
+}
+function drawHook(t){
+  const h=hook();if(!h.words.length||h.secs<=0||t<0||t>=h.secs)return;
+  const size=h.size*K,pad=size*.65;pctx.font=`bold ${size}px "${h.font}", sans-serif`;pctx.textAlign='left';pctx.textBaseline='middle';
+  const sp=pctx.measureText(' ').width,maxw=1080*.9*K-2*pad,lines=[];let cur=[],cw=0;
+  h.words.forEach(w=>{const ww=pctx.measureText(w.t).width;if(cur.length&&cw+sp+ww>maxw){lines.push([cur,cw]);cur=[];cw=0}cw+=(cur.length?sp:0)+ww;cur.push([w,ww])});
+  lines.push([cur,cw]);
+  const lh=size*1.28,bw=Math.max(...lines.map(l=>l[1]))+2*pad,bh=lh*lines.length+pad*.9,x0=135-bw/2,y0=h.y/100*480-bh/2;
+  pctx.globalAlpha=Math.min(1,t/.25,(h.secs-t)/.25);pctx.fillStyle=h.box;rr(x0,y0,bw,bh,44*K);pctx.fill();
+  let y=y0+pad*.45+lh/2;lines.forEach(([items,w])=>{let x=135-w/2;items.forEach(([wd,ww])=>{pctx.fillStyle=wd.c||h.color;pctx.fillText(wd.t,x,y);x+=ww+sp});y+=lh});
+  pctx.globalAlpha=1;
+}
+function drawCaption(t,camH){
+  const st=style(),words=S.words;const i=words.findIndex(w=>t>=w.s&&t<w.e+.2);if(i<0)return;
+  const g=Math.floor(i/st.chunk)*st.chunk,grp=words.slice(g,g+st.chunk).map(w=>st.upper?w.w.toUpperCase():w.w);
+  pctx.font=`${st.size*K}px "${st.font}", Impact, sans-serif`;pctx.textAlign='left';pctx.textBaseline='middle';pctx.lineWidth=3;pctx.strokeStyle='#000';
+  const sp=pctx.measureText(' ').width,tot=grp.reduce((a,x)=>a+pctx.measureText(x).width,0)+sp*(grp.length-1),y=$('capY').value/100*480;let x=135-tot/2;
+  grp.forEach((wd,k)=>{const ww=pctx.measureText(wd).width,on=g+k===i;
+    if(on&&st.mode==='box'){pctx.fillStyle=st.box;rr(x-5,y-st.size*K*.62,ww+10,st.size*K*1.24,5);pctx.fill()}
+    pctx.fillStyle=(on&&st.mode!=='box')?st.hl:st.color;pctx.strokeText(wd,x,y);pctx.fillText(wd,x,y);x+=ww+sp})
+}
+function loop(){
+  const c=over.getContext('2d');c.clearRect(0,0,over.width,over.height);c.lineWidth=3;c.font='bold 14px sans-serif';
+  [['cam','#ff4f8b','Face cam'],['game','#3dd6c6','Gameplay']].forEach(([k,col,lab])=>{const b=S.boxes[k];if(!b)return;
+    c.strokeStyle=col;c.fillStyle=col;c.strokeRect(b[0]*over.width,b[1]*over.height,b[2]*over.width,b[3]*over.height);c.fillText(lab,b[0]*over.width+6,b[1]*over.height+18)});
+  if(vid.duration){$('seek').value=vid.currentTime/vid.duration*1000;$('time').textContent=`${fmt(vid.currentTime)} / ${fmt(vid.duration)}`}
+  if(S.clipPlaying&&vid.currentTime>=+$('end').value){vid.pause();S.clipPlaying=false}
+  pctx.fillStyle='#000';pctx.fillRect(0,0,270,480);
+  if(vid.videoWidth&&tab==='editor'){
+    const camH=$('camPct').value/100*480;
+    if(S.boxes.cam)cover(S.boxes.cam,0,0,270,camH);
+    if(S.boxes.game)cover(S.boxes.game,0,camH,270,480-camH);
+    const t=vid.currentTime-(+$('start').value);drawCaption(t,camH);drawHook(t);
+  }
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

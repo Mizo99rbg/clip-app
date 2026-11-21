@@ -1,0 +1,6 @@
+clip.db
+*.wav
+workspace/*
+!workspace/.keep
+outputs/*
+!outputs/.keep
