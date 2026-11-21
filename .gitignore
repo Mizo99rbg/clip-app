@@ -1,3 +1,9 @@
+.env
+node_modules/
+venv/
+.venv/
+__pycache__/
+*.mp4
 clip.db
 *.wav
 workspace/*
